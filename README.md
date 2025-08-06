@@ -30,13 +30,40 @@ cd bin
 ### Controls
 
 CHIP-8 Keypad	Keyboard Mapping
-1 2 3 C	  1 2 3 4
 
-4 5 6 D	  Q W E R
+VCHIP Key - Keybinds
 
-7 8 9 E	  A S D F
+1  - 1
 
-A 0 B F	  Z X C V
+2 - 2
+
+3 - 3
+
+C - 4
+
+4 - Q
+
+5 - W
+
+6 - E
+
+D - R
+
+7 - A
+
+8 - S
+
+9 - D
+
+E - F
+
+A - Z
+
+0 - X
+
+B - C
+
+F - V
 
 # ROMs
 
