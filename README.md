@@ -13,8 +13,10 @@ It consists of 16 8-bit registers, 4kB of memory, a hexadecimal keypad, a monoch
 ## Prerequisites
 *SDL 2* 
 ## Build & Run
- Clone the repo
+Clone the repo
+
 git clone https://github.com/Verticraze/VChip.git
+
 cd VChip
 
 # Build (if applicable)
