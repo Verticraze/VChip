@@ -3,9 +3,7 @@
 #include<iostream>
 #include<random>
 #include "time.h"
-
 #include "VChip.hpp"
-
 
 
 unsigned char fontSet[80] =
@@ -364,15 +362,45 @@ void VChip::instructionCycle()
 									{
 										deviceRegisters[0xF] = 0;
 									}
-									indexRegisters += deviceRegisters[(currentOpCode & 0x0F00) >> 8];
+									indexRegister += deviceRegisters[(currentOpCode & 0x0F00) >> 8];
 									programCounter+=2;
 									break;
 								}
 							case 0x0029:
+							{
+								indexRegister = deviceRegisters[(currentOpCode & 0x0F00) >> 8] * 0x5;
+								programCounter += 2;
+								break;
+							}
 							case 0x0033:
+							{
+								deviceMemory[indexRegister] = deviceRegisters[(currentOpCode & 0x0F00) >> 8] / 100;
+								deviceMemory[indexRegister + 1] = (deviceRegisters[(currentOpCode & 0x0F00) >> 8] / 10) % 10;
+								deviceMemory[indexRegister + 2] = deviceRegisters[(currentOpCode & 0x0F00) >> 8] % 10 ;
+								programCounter += 2;
+								break;
+							}
 							case 0x0055:
-							case 0x0065:							
-							default:
+							{
+								for(int i = 0; i <= (currentOpCode & 0x0F00) >> 8; i++)
+								{
+									deviceMemory[indexRegister + i] = deviceRegisters[i];
+									indexRegister += ((currentOpCode&0x0F00) >> 8) + 1;
+									programCounter += 2;
+									break;
+								}
+							}
+							case 0x0065:
+							{
+								for(int i = 0 ; i <= ((currentOpCode & 0x0F00) >> 8) ; ++i)
+								{
+									deviceRegisters[i] = deviceMemory[indexRegister + i];
+								}
+								indexRegisters += ((currentOpCode & 0x0F00) >> 8) + 1;
+								programCounter += 2;
+								break;
+							}				
+							default: printf("Unknown Opcode[0xF000]: 0x%X\n", currentOpCode);
 						}
 						break;
 					}	
