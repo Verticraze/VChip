@@ -28,7 +28,10 @@ unsigned char fontSet[80] =
 
 VChip::VChip(){}
 VChip::~VChip(){}
-
+void VChip::debugPrint()
+{
+    printf("PC: %X  I: %X  OPCODE: %04X\n", programCounter, indexRegister, currentOpCode);
+}
 void VChip::Init()
 {
 	programCounter = 0x200;
@@ -41,7 +44,7 @@ void VChip::Init()
 		graphicsBuffer[i] = 0;
 	}
 	
-	for(int i = 0 ;i < 4096 ; i++)
+	for(int i = 0 ;i < 16 ; ++i)
 	{
 		stack[i] = 0;
 		deviceKeypad[i] = 0;
@@ -58,9 +61,51 @@ void VChip::Init()
 	srand(time(NULL));
 }
 
-bool VChip::loadApp()
+bool VChip::loadApp(const char* fileName)
 {
-	std::cout<<"LoadApp";
+	std::cout<<"LoadApp\n";
+	Init();
+	
+	printf("Loading ROM file:%s\n", fileName);
+	
+	FILE* romFile = fopen(fileName,"rb");
+	if(romFile == NULL)
+	{
+		std::cerr<<"Failed to open ROM File\n";
+		return false;
+	}
+	fseek(romFile, 0 ,SEEK_END);
+	long romSize = ftell(romFile);
+	rewind(romFile);
+	char* romBuffer = (char *)calloc(romSize,sizeof(char));
+	if(romBuffer == NULL)
+	{
+		std::cerr<<"Failed to read ROM";
+		return false;
+	}
+	size_t result = fread(romBuffer,sizeof(char),size_t(romSize),romFile);
+	if(result != (size_t)romSize)
+	{
+		std::cerr<<"Failed to read ROM file\n";
+		return false;
+	}
+	
+	if((4096-512)>romSize)
+	{
+		for(int i = 0; i < romSize; ++i)
+		{
+			deviceMemory[i+512] = (uint8_t)romBuffer[i];
+		}
+	}
+	else
+	{
+		std::cerr<<"ROM too large to fit in memory\n";
+		return false;
+	}
+	fclose(romFile);
+	free(romBuffer);
+	
+	return true;
 }
 
 void VChip::instructionCycle()
@@ -152,7 +197,7 @@ void VChip::instructionCycle()
 		}
 		case 0x7000:
 		{
-			deviceRegisters[currentOpCode & 0x0F00 >> 8] += currentOpCode & 0x00FF;
+			deviceRegisters[(currentOpCode & 0x0F00) >> 8] += currentOpCode & 0x00FF;
 			programCounter+=2;
 			break;
 		}
@@ -229,11 +274,11 @@ void VChip::instructionCycle()
 								{
 									deviceRegisters[0xF] = 1;
 								}							
-							deviceRegisters[(currentOpCode & 0x0F00) >> 8] = deviceRegisters[(currentOpCode & 0x00F0 >> 4)] - deviceRegisters[(currentOpCode & 0x0F00) >> 8];
+							deviceRegisters[(currentOpCode & 0x0F00) >> 8] = deviceRegisters[(currentOpCode & 0x00F0) >> 4] - deviceRegisters[(currentOpCode & 0x0F00) >> 8];
 							programCounter += 2;
 							break;
 						}	
-					case 0x000E:
+					case 0x000E:	
 						{
 							deviceRegisters[0xF] = deviceRegisters[(currentOpCode & 0x0F00) >> 8] >> 7;
 							deviceRegisters[(currentOpCode & 0x0F00) >> 8] <<= 1;
@@ -273,161 +318,155 @@ void VChip::instructionCycle()
 				programCounter += 2;
 				break;		
 			}
-				case 0xD000:
-					{
-						unsigned short x = deviceRegisters[(currentOpCode & 0x0F00) >> 8];
-						unsigned short y = deviceRegisters[(currentOpCode & 0x00F0) >> 4];
-						unsigned short height = currentOpCode & 0x000F;
-						unsigned short pixel;
-						
-						for(int lineY = 0; lineY < height; lineY++)
-						{
-							pixel = deviceMemory[indexRegister +lineY];
+		case 0xD000:
+			{
+				unsigned short x = deviceRegisters[(currentOpCode & 0x0F00) >> 8];
+				unsigned short y = deviceRegisters[(currentOpCode & 0x00F0) >> 4];
+				unsigned short height = currentOpCode & 0x000F;
+				unsigned short pixel;
+				
+				for(int lineY = 0; lineY < height; lineY++)	
+				{
+						pixel = deviceMemory[indexRegister +lineY];
 							
-							for(int lineX = 0; lineX < 8; lineX++)
+					for(int lineX = 0; lineX < 8; lineX++)
+					{
+						if((pixel & (0x80 >> lineX)) != 0)
+						{
+							if(graphicsBuffer[(x + lineX + ( y + lineY ) * 64)] == 1)
 							{
-								if((pixel & (0x80 >> lineX)) != 0)
-								{
-									if(graphicsBuffer[(x + lineX + ( y + lineY ) * 64)] == 1)
-									{
-										deviceRegisters[0xF] = 1;
-									}
-									graphicsBuffer[x+lineX +((y+lineY)*64)] ^= 1;
-								}
+								deviceRegisters[0xF] = 1;
 							}
+							graphicsBuffer[x+lineX +((y+lineY)*64)] ^= 1;
 						}
-						drawFlag = true;
-						programCounter += 2;
+					}
+				}
+				drawFlag = true;
+				programCounter += 2;
+					
+				break;
+			}
+			case 0xE000:
+			{
+				switch(currentOpCode & 0x00FF)
+				{
+					case 0x009E:
+						{
+							if(deviceKeypad[deviceRegisters[(currentOpCode & 0x0F00) >> 8 ]] != 0)
+								{
+									programCounter += 4;
+								}
+							else
+								{
+									programCounter += 2;
+								}
+							break;
+						}
+								
+					case 0x00A1:
+						{
+							if(deviceKeypad[deviceRegisters[(currentOpCode & 0x0F00) >> 8 ]] == 0)
+								{
+									programCounter += 4;
+								}
+							else
+								{
+									programCounter += 2;
+								}
+							break;
+						}
+					default: printf("\n Unknown Opcode :%.4X \n",currentOpCode);
+						exit(3);
+				}
+				break;
+			}
+			case 0xF000:
+				{
+					switch(currentOpCode & 0x00FF)
+					{
+						case 0x0007:
+							{
+								deviceRegisters[(currentOpCode & 0x0F00) >> 8] = delayTimer;
+								programCounter += 2;
+								break;
+							}
+						case 0x000A:
+							{
+								bool keyPressed = false;
+								for(int i = 0 ; i < 16;++i)
+								{
+									if(deviceKeypad[i] != 0)
+									{
+										deviceRegisters[(currentOpCode & 0x0F00) >> 8] = i;
+										keyPressed = true;
+									}
+								}
+								if(!keyPressed)
+								{
+									return;
+								}
+								programCounter += 2;
+							}
+								break;
+								
+						case 0x0015:
+							{
+								delayTimer = deviceRegisters[(currentOpCode & 0x0F00) >> 8 ];
+								programCounter += 2 ;
+								break;
+							}
+						case 0x0018:
+							{
+								soundTimer= deviceRegisters[(currentOpCode & 0x0F00) >> 8 ];
+								programCounter += 2;
+								break;
+							}
+						case 0x001E:
+							{
+								indexRegister += deviceRegisters[(currentOpCode & 0x0F00) >> 8];
+								programCounter+=2;
+								break;
+							}
+						case 0x0029:
+						{
+							indexRegister = deviceRegisters[(currentOpCode & 0x0F00) >> 8] * 0x5;
+							programCounter += 2;
+							break;
+						}
+						case 0x0033:
+						{
+							deviceMemory[indexRegister] = deviceRegisters[(currentOpCode & 0x0F00) >> 8] / 100;
+							deviceMemory[indexRegister + 1] = (deviceRegisters[(currentOpCode & 0x0F00) >> 8] / 10) % 10;
+							deviceMemory[indexRegister + 2] = deviceRegisters[(currentOpCode & 0x0F00) >> 8] % 10 ;
+							programCounter += 2;
+							break;
+						}
+						case 0x0055:
+						{
+							for(int i = 0; i <= (currentOpCode & 0x0F00) >> 8; i++)
+							{
+								deviceMemory[indexRegister + i] = deviceRegisters[i];
+							}	
+							indexRegister += ((currentOpCode&0x0F00) >> 8) + 1;
+							programCounter += 2;
+							break;			
+						}
+						case 0x0065:
+						{
+							for(int i = 0 ; i <= ((currentOpCode & 0x0F00) >> 8) ; ++i)
+							{
+								deviceRegisters[i] = deviceMemory[indexRegister + i];
+							}
+							indexRegister += ((currentOpCode & 0x0F00) >> 8) + 1;
+							programCounter += 2;
+							break;
+						}				
+						default: printf("Unknown Opcode[0xF000]: 0x%X\n", currentOpCode);
+						exit(3);
 					}
 					break;
-				case 0xE000:
-					{
-						switch(currentOpCode & 0x00FF)
-						{
-							case 0x009E:
-								{
-									if(deviceKeypad[deviceRegisters[currentOpCode & 0x0F00 >> 8 ]] != 0)
-									{
-										programCounter += 4;
-									}
-									else
-									{
-										programCounter += 2;
-									}
-									break;
-								}
-								
-							case 0x00A1:
-								{
-									if(deviceKeypad[deviceRegisters[currentOpCode & 0x0F00 >> 8 ]] != 0)
-									{
-										programCounter += 4;
-									}
-									else
-									{
-										programCounter += 2;
-									}
-									break;
-								}
-							default: printf("\n Unknown Opcode :%.4X \n",currentOpCode);
-								exit(3);
-						}
-						break;
-					}
-				case 0xF000:
-					{
-						switch(currentOpCode & 0x00FF)
-						{
-							case 0x0007:
-								{
-									deviceRegisters[(currentOpCode & 0x0F00) >> 8] = delayTimer;
-									programCounter += 2;
-									break;
-								}
-							case 0x000A:
-								{
-									bool keyPressed = false;
-									for(int i = 0 ; i < 16;i++)
-									{
-										if(deviceKeypad[i] != 0)
-										{
-											deviceRegisters[(currentOpCode & 0x0F00) >> 8] = i;
-											keyPressed = true;
-										}
-									}
-									if(!keyPressed)
-									{
-										return;
-									}
-									programCounter += 2;
-									break;
-								}
-							case 0x0015:
-								{
-									delayTimer = deviceRegisters[(currentOpCode & 0x0F00) >> 8 ];
-									programCounter += 2 ;
-									break;
-								}
-							case 0x0018:
-								{
-									soundTimer= deviceRegisters[(currentOpCode & 0x0F00) >> 8 ];
-									programCounter += 2;
-									break;
-								}
-							case 0x001E:
-								{
-									if(indexRegister + deviceRegisters[(currentOpCode & 0x0F00) >> 8])
-									{
-										deviceRegisters[0xF] = 1;
-									}
-									else
-									{
-										deviceRegisters[0xF] = 0;
-									}
-									indexRegister += deviceRegisters[(currentOpCode & 0x0F00) >> 8];
-									programCounter+=2;
-									break;
-								}
-							case 0x0029:
-							{
-								indexRegister = deviceRegisters[(currentOpCode & 0x0F00) >> 8] * 0x5;
-								programCounter += 2;
-								break;
-							}
-							case 0x0033:
-							{
-								deviceMemory[indexRegister] = deviceRegisters[(currentOpCode & 0x0F00) >> 8] / 100;
-								deviceMemory[indexRegister + 1] = (deviceRegisters[(currentOpCode & 0x0F00) >> 8] / 10) % 10;
-								deviceMemory[indexRegister + 2] = deviceRegisters[(currentOpCode & 0x0F00) >> 8] % 10 ;
-								programCounter += 2;
-								break;
-							}
-							case 0x0055:
-							{
-								for(int i = 0; i <= (currentOpCode & 0x0F00) >> 8; i++)
-								{
-									deviceMemory[indexRegister + i] = deviceRegisters[i];
-								}
-								indexRegister += ((currentOpCode&0x0F00) >> 8) + 1;
-								programCounter += 2;
-								break;
-								
-							}
-							case 0x0065:
-							{
-								for(int i = 0 ; i <= ((currentOpCode & 0x0F00) >> 8) ; ++i)
-								{
-									deviceRegisters[i] = deviceMemory[indexRegister + i];
-								}
-								indexRegister += ((currentOpCode & 0x0F00) >> 8) + 1;
-								programCounter += 2;
-								break;
-							}				
-							default: printf("Unknown Opcode[0xF000]: 0x%X\n", currentOpCode);
-						}
-						break;
-					}	
-					default:printf("\n Unknown Opcode :%.4X \n",currentOpCode);
+				}	
+				default:printf("\n Unknown Opcode :%.4X \n",currentOpCode);
 						exit(3);
 		}
 		

@@ -26,6 +26,11 @@ int keyBindings[16]=
 
 int main(int argc, char **argv)
 {
+	if(argc!=2)
+	{
+		std::cout<<"Usage: Vchip <ROM FILE>\n";
+		return 1;
+	}
 	int windowWidth = 640;
 	int windowHeight = 480;
 	
@@ -61,10 +66,14 @@ int main(int argc, char **argv)
     uint32_t pixels[2048];
     
     loadApp:
-    	instance.loadApp();
+    	if(!instance.loadApp(argv[1]))
+    	{
+    		return 2;
+    	}
     
 	while(true)
 	{
+		
 		instance.instructionCycle();
 		SDL_Event e;
 		while(SDL_PollEvent(&e))
@@ -105,6 +114,17 @@ int main(int argc, char **argv)
 					}
 				}
 			}
+			if(instance.drawFlag )
+				{
+					instance.drawFlag=true;
+					
+					for(int i = 0; i<2048;++i )
+					{
+						uint8_t pixel = instance.graphicsBuffer[i];
+						pixels[i] = (0x00FFFFFF * pixel) | 0xFF000000;
+					}
+				}
+				
 			
 	    	SDL_UpdateTexture(sdlTexture, NULL, pixels, 64 * sizeof(uint32_t));
             // Clear screen and render

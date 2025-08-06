@@ -27,8 +27,9 @@ class VChip
 		VChip();
 		~VChip();
 		
+		void debugPrint();
 		void instructionCycle();//emulate_cycle
-		bool loadApp();//load and file_path
+		bool loadApp(const char* fileName);//load and file_path
 						
 };
 #endif
