@@ -10,28 +10,32 @@ It consists of 16 8-bit registers, 4kB of memory, a hexadecimal keypad, a monoch
 - *64x32 Monochromatic Display*
 - *ROM loading support*
 ## Getting Started
-## Prerequisites
+### Prerequisites
 *SDL 2* 
-## Build & Run
+### Build & Run
 Clone the repo
-
+```
 git clone https://github.com/Verticraze/VChip.git
 
 cd VChip
-
-# Build (if applicable)
+```
+### Build (if applicable)
+```
 make   
 
 cd bin
 
 ./main <ROMFILE>
-
-# Controls
+```
+### Controls
 
 CHIP-8 Keypad	Keyboard Mapping
 1 2 3 C	  1 2 3 4
+
 4 5 6 D	  Q W E R
+
 7 8 9 E	  A S D F
+
 A 0 B F	  Z X C V
 
 # ROMs
