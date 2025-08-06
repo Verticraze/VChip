@@ -70,35 +70,47 @@ void VChip::instructionCycle()
 	switch(currentOpCode & 0xF000)
 	{
 		case 0x0000:
-			switch(currentOpCode&0x000F)
+			switch(currentOpCode & 0x000F)
 			{
 				case 0x0000:
-					for(int i = 0; i <2048;i++)
-					{
-						graphicsBuffer[i] = 0;
+					{	
+						for(int i = 0; i <2048;i++)
+						{
+							graphicsBuffer[i] = 0;
+						}
+						drawFlag = true;
+						programCounter += 2 ;
+						break;
 					}
-					drawFlag = true;
-					programCounter += 2 ;
-					break;
 				case 0x000E:
-					--stackPointer;
-					programCounter = stack[stackPointer];
-					programCounter+=2;
-					break;
-					
+					{
+						--stackPointer;
+						programCounter = stack[stackPointer];
+						programCounter+=2;
+						break;
+					}
 				default:
+				{
 					printf("Unknown op code : %.4X\n",currentOpCode);
 					exit(3);
+				}
 			}
+			break;
+			
 		case 0x1000:
+		{
 			programCounter = currentOpCode & 0x0FFF;
 			break;
+		}
 		case 0x2000:
+		{
 			stack[stackPointer]=programCounter;
 			++stackPointer;
 			programCounter = currentOpCode & 0x0FFF;
 			break;
+		}
 		case 0x3000:
+		{
 			if(deviceRegisters[(currentOpCode & 0x0F00) >> 8] == (currentOpCode & 0x00FF))
 			{
 				programCounter+=4;
@@ -108,8 +120,9 @@ void VChip::instructionCycle()
 				programCounter+=2;
 			}
 			break;
+		}
 		case 0x4000:
-			if(deviceRegisters[(currentOpCode&0x0F00)>>8]!=(currentOpCode & 0x00FF))
+		{	if(deviceRegisters[(currentOpCode&0x0F00)>>8]!=(currentOpCode & 0x00FF))
 			{
 				programCounter+=4;
 			}
@@ -118,7 +131,9 @@ void VChip::instructionCycle()
 				programCounter+=2;
 			}
 			break;
+		}
 		case 0x5000:
+		{
 			if(deviceRegisters[(currentOpCode&0x0F00) >>8] == deviceRegisters[(currentOpCode & 0x00F0)>>4])
 			{
 				programCounter+=4;
@@ -127,16 +142,23 @@ void VChip::instructionCycle()
 			{
 				programCounter +=2;
 			}
+			break;
+		}
 		case 0x6000:
+		{
 			deviceRegisters[(currentOpCode & 0x0F00)>>8] = currentOpCode & 0x00FF;
 			programCounter+=2;
 			break;
+		}
 		case 0x7000:
+		{
 			deviceRegisters[currentOpCode & 0x0F00 >> 8] += currentOpCode & 0x00FF;
 			programCounter+=2;
 			break;
+		}
 		case 0x8000:
-				switch(currentOpCode & 0x000F):
+			{
+				switch(currentOpCode & 0x000F)
 				{
 					case 0x0000:
 						{		
@@ -146,26 +168,26 @@ void VChip::instructionCycle()
 						}
 					case 0x0001:
 						{
-							deviceRegisters[currentOpCode & 0x0F00) >> 8] |= deviceRegisters[(currentOpCode & 0x00F0) >> 4];
+							deviceRegisters[(currentOpCode & 0x0F00) >> 8] |= deviceRegisters[(currentOpCode & 0x00F0) >> 4];
 							programCounter += 2;
 							break;
 						}
 					case 0x0002:
 						{
-							deviceRegisters[currentOpCode & 0x0F00) >> 8] &= deviceRegisters[(currentOpCode & 0x00F0) >> 4];
+							deviceRegisters[(currentOpCode & 0x0F00) >> 8] &= deviceRegisters[(currentOpCode & 0x00F0) >> 4];
 							programCounter += 2;
 							break;
 						}
 					case 0x0003:
 						{	
-							deviceRegisters[currentOpCode & 0x0F00) >> 8] ^= deviceRegisters[(currentOpCode & 0x00F0) >> 4];
+							deviceRegisters[(currentOpCode & 0x0F00) >> 8] ^= deviceRegisters[(currentOpCode & 0x00F0) >> 4];
 							programCounter += 2;
 							break;
 						}
 					case 0x0004:
 						{
-							deviceRegisters[currentOpCode & 0x0F00) >> 8] += deviceRegisters[(currentOpCode & 0x00F0) >> 4];
-							if(deviceRegisters [(currentOpCode & 0x00F0) >> 4] > [0xFF - deviceRegisters[(currentOpCode & 0x0F00) >> 8])
+							deviceRegisters[(currentOpCode & 0x0F00) >> 8] += deviceRegisters[(currentOpCode & 0x00F0) >> 4];
+							if(deviceRegisters [(currentOpCode & 0x00F0) >> 4] > (0xFF - deviceRegisters[(currentOpCode & 0x0F00) >> 8]))
 								{
 									deviceRegisters[0xF] = 1;
 								}
@@ -178,7 +200,7 @@ void VChip::instructionCycle()
 						}	
 					case 0x0005:
 						{
-							if(deviceRegisters[(currentOpCode & 0x00F0) >> 4] > [0xFF - deviceRegisters[(currentOpCode & 0x0F00) >> 8])
+							if(deviceRegisters[(currentOpCode & 0x00F0) >> 4] > (0xFF - deviceRegisters[(currentOpCode & 0x0F00) >> 8]))
 								{
 									deviceRegisters[0xF] = 0;
 								}
@@ -186,20 +208,20 @@ void VChip::instructionCycle()
 								{
 									deviceRegisters[0xF] = 1;
 								}
-							deviceRegisters[currentOpCode & 0x0F00) >> 8] -= deviceRegisters[(currentOpCode & 0x00F0) >> 4];
+							deviceRegisters[(currentOpCode & 0x0F00) >> 8] -= deviceRegisters[(currentOpCode & 0x00F0) >> 4];
 							programCounter+=2;
 							break;
 						}
 					case 0x0006:
 						{
 							deviceRegisters[0xF] = deviceRegisters[(currentOpCode & 0x0F00) >> 8] & 0x1;
-							deviceRegisters[(currentOpCode & 0x0F00) >> 8] >> = 1;
+							deviceRegisters[(currentOpCode & 0x0F00) >> 8] >>= 1;
 							programCounter += 2;
 							break;
 						}
 					case 0x0007:
 						{
-							if(deviceRegisters[currentOpCode & 0x0F00) >> 8] > deviceRegisters[(currentOpCode & 0x00F0) >> 4])
+							if(deviceRegisters[(currentOpCode & 0x0F00) >> 8] > deviceRegisters[(currentOpCode & 0x00F0) >> 4])
 								{
 									deviceRegisters[0xF] = 0;
 								}
@@ -214,43 +236,43 @@ void VChip::instructionCycle()
 					case 0x000E:
 						{
 							deviceRegisters[0xF] = deviceRegisters[(currentOpCode & 0x0F00) >> 8] >> 7;
-							deviceRegisters[(currentOpCode & 0x0F00) >> 8] << = 1;
+							deviceRegisters[(currentOpCode & 0x0F00) >> 8] <<= 1;
 							programCounter += 2;
 							break;
-							
 						}
 						
 						default: printf("\nUnknown OpCode:%.4X\n",currentOpCode);
-							exit(3);
-							
+							exit(3);		
 					}
 				break;
-				
-				case 0x9000:
-					if(deviceRegisters[(currentOpCode & 0x0F00) >> 8] != deviceRegisters[(currentOpCode & 0x00F0) >> 4])
-					{
-						programCounter += 4;
-					}
-					else
-					{
-						programCounter += 2;
-					}
-				case 0xA000:
-					{
-						indexRegister = currentOpCode & 0x0FFF;
-						programCounter += 2;
-						break;
-					}
-				case  0xB000:
-					{
-						programCounter = (currentOpCode & 0x0FFF) + deviceRegisters[0];
-						break;
-					}
-				case 0xC000:
-					{
-						deviceRegisters[(currentOpCode & 0x0F00)>> 8] = (rand() % (0xFF + 1))(currentOpCode & 0x00FF);
-						programCounter += 2;
-					}
+			}
+		case 0x9000:
+			if(deviceRegisters[(currentOpCode & 0x0F00) >> 8] != deviceRegisters[(currentOpCode & 0x00F0) >> 4])
+			{
+				programCounter += 4;
+			}
+			else
+			{
+				programCounter += 2;
+			}
+			break;
+		case 0xA000:
+			{
+				indexRegister = currentOpCode & 0x0FFF;
+				programCounter += 2;
+				break;
+			}
+		case  0xB000:
+			{
+				programCounter = (currentOpCode & 0x0FFF) + deviceRegisters[0];
+				break;
+			}
+		case 0xC000:
+			{
+				deviceRegisters[(currentOpCode & 0x0F00)>> 8] = (rand() % (0xFF + 1)) & (currentOpCode & 0x00FF);
+				programCounter += 2;
+				break;		
+			}
 				case 0xD000:
 					{
 						unsigned short x = deviceRegisters[(currentOpCode & 0x0F00) >> 8];
@@ -280,11 +302,11 @@ void VChip::instructionCycle()
 					break;
 				case 0xE000:
 					{
-						switch(currenOpCode & 0x00FF):
+						switch(currentOpCode & 0x00FF)
 						{
 							case 0x009E:
 								{
-									if(deviceKeypad[deviceRegisters[currentOpcode & 0x0F00 >> 8 ]] != 0)
+									if(deviceKeypad[deviceRegisters[currentOpCode & 0x0F00 >> 8 ]] != 0)
 									{
 										programCounter += 4;
 									}
@@ -297,7 +319,7 @@ void VChip::instructionCycle()
 								
 							case 0x00A1:
 								{
-									if(deviceKeypad[deviceRegisters[currentOpcode & 0x0F00 >> 8 ]] != 0)
+									if(deviceKeypad[deviceRegisters[currentOpCode & 0x0F00 >> 8 ]] != 0)
 									{
 										programCounter += 4;
 									}
@@ -329,7 +351,7 @@ void VChip::instructionCycle()
 									{
 										if(deviceKeypad[i] != 0)
 										{
-											deviceRegisters[currentOpCode & 0x0F00) >> 8] = i;
+											deviceRegisters[(currentOpCode & 0x0F00) >> 8] = i;
 											keyPressed = true;
 										}
 									}
@@ -354,7 +376,7 @@ void VChip::instructionCycle()
 								}
 							case 0x001E:
 								{
-									if(indexRegister + deviceRegisters[(currenOpCode & 0x0F00) >> 8])
+									if(indexRegister + deviceRegisters[(currentOpCode & 0x0F00) >> 8])
 									{
 										deviceRegisters[0xF] = 1;
 									}
@@ -385,10 +407,11 @@ void VChip::instructionCycle()
 								for(int i = 0; i <= (currentOpCode & 0x0F00) >> 8; i++)
 								{
 									deviceMemory[indexRegister + i] = deviceRegisters[i];
-									indexRegister += ((currentOpCode&0x0F00) >> 8) + 1;
-									programCounter += 2;
-									break;
 								}
+								indexRegister += ((currentOpCode&0x0F00) >> 8) + 1;
+								programCounter += 2;
+								break;
+								
 							}
 							case 0x0065:
 							{
@@ -396,7 +419,7 @@ void VChip::instructionCycle()
 								{
 									deviceRegisters[i] = deviceMemory[indexRegister + i];
 								}
-								indexRegisters += ((currentOpCode & 0x0F00) >> 8) + 1;
+								indexRegister += ((currentOpCode & 0x0F00) >> 8) + 1;
 								programCounter += 2;
 								break;
 							}				
